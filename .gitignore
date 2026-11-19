@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.astro/
+.env
+.env.*
+*.pem
+id_rsa
+id_ed25519
+.DS_Store

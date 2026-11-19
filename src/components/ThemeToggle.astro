@@ -1,0 +1,17 @@
+<button id="theme" class="theme" type="button" aria-label="Đổi giao diện sáng hoặc tối">Sáng</button>
+<script is:inline>
+  (function () {
+    var btn = document.getElementById('theme');
+    if (!btn) return;
+    function sync() {
+      btn.textContent = document.documentElement.dataset.theme === 'dark' ? 'Tối' : 'Sáng';
+    }
+    sync();
+    btn.addEventListener('click', function () {
+      var next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      document.documentElement.dataset.theme = next;
+      try { localStorage.setItem('theme', next); } catch (e) {}
+      sync();
+    });
+  })();
+</script>

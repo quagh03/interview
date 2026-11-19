@@ -1,0 +1,208 @@
+---
+import { render } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import InlineCode from '../components/InlineCode.astro';
+import { groupByPrimaryTag, groupByTopic, loadQuestions, searchBlob } from '../lib/questions';
+import { levels, levelLabel, topics } from '../lib/taxonomy';
+
+const questions = await loadQuestions();
+const groups = groupByTopic(questions);
+const rendered = await Promise.all(
+  questions
+    .filter((question) => typeof question.body === 'string' && question.body.trim())
+    .map(async (question) => ({ id: question.id, Content: (await render(question)).Content })),
+);
+const base = import.meta.env.BASE_URL;
+const sourceJson = JSON.stringify(
+  Object.fromEntries(
+    questions
+      .filter((question) => typeof question.body === 'string' && question.body.trim())
+      .map((question) => [question.id, question.body]),
+  ),
+).replaceAll('<', '\\u003c');
+---
+
+<Base title="Interview" split>
+  <div class="split" id="split">
+    <div class="list-pane">
+      <div class="menus">
+        <div class="dd" data-dd="level">
+          <button class="dd-btn" type="button" aria-expanded="false" aria-haspopup="listbox">
+            <span class="dd-k">Độ khó</span>
+            <span class="dd-v" data-dd-label="level">Tất cả</span>
+            <span class="dd-caret" aria-hidden="true"></span>
+          </button>
+          <div class="dd-panel" hidden role="listbox" aria-label="Độ khó">
+            <button type="button" role="option" data-value="">Tất cả</button>
+            {levels.map((level) => (
+              <button type="button" role="option" data-value={level}>{levelLabel[level]}</button>
+            ))}
+          </div>
+        </div>
+        <div class="dd" data-dd="group">
+          <button class="dd-btn" type="button" aria-expanded="false" aria-haspopup="listbox">
+            <span class="dd-k">Nhóm</span>
+            <span class="dd-v" data-dd-label="group">Tất cả</span>
+            <span class="dd-caret" aria-hidden="true"></span>
+          </button>
+          <div class="dd-panel" id="group-panel" hidden role="listbox" aria-label="Nhóm câu hỏi"></div>
+        </div>
+        <button class="add-btn" id="add-question" type="button">Thêm câu hỏi</button>
+      </div>
+      <p id="sync-status" class="sync-status" hidden></p>
+      <div id="questions">
+        {groups.map((group) => (
+          <section class="group" data-topic={group.topic}>
+            <div class="topic-head">
+              <h2>{group.topic}</h2>
+              <span class="ring" data-ring aria-label={`0 trên ${group.items.length} đã học`}>
+                <svg viewBox="0 0 36 36" aria-hidden="true">
+                  <circle class="ring-track" cx="18" cy="18" r="15"></circle>
+                  <circle class="ring-value" cx="18" cy="18" r="15"></circle>
+                </svg>
+                <span class="ring-label">0/{group.items.length}</span>
+              </span>
+            </div>
+            {groupByPrimaryTag(group.items).map((block) => (
+              <section class="block is-collapsed" data-section={block.tag}>
+                <button class="block-head" type="button" aria-expanded="false">
+                  <span class="block-caret" aria-hidden="true"></span>
+                  <h3>{block.tag}</h3>
+                  <span class="block-count">0/{block.items.length}</span>
+                </button>
+                {block.items.map((question) => (
+                  <article
+                    class="q"
+                    data-id={question.id}
+                    data-title={question.data.title}
+                    data-topic={question.data.topic}
+                    data-section={question.data.section}
+                    data-level={question.data.level}
+                    data-order={question.data.order}
+                    data-tag={question.data.tags[0] ?? question.data.section}
+                    data-tags={question.data.tags.join('|')}
+                    data-search={searchBlob(question)}
+                  >
+                    <button class="studied" type="button" aria-pressed="false" aria-label="Đánh dấu đã học"></button>
+                    <div class="q-body">
+                      <a class="q-link" href={`${base}q/${question.id}/`}>
+                        <span class="q-title"><InlineCode text={question.data.title} /></span>
+                        <span class="q-meta">
+                          {question.data.section}
+                          {' · '}
+                          <span class={question.data.level === 'senior' ? 'senior' : undefined}>{levelLabel[question.data.level]}</span>
+                        </span>
+                      </a>
+                      <span class="q-actions">
+                        <button class="text-btn" type="button" data-edit>Sửa</button>
+                        <button class="text-btn danger" type="button" data-delete>Xóa</button>
+                      </span>
+                    </div>
+                  </article>
+                ))}
+              </section>
+            ))}
+          </section>
+        ))}
+      </div>
+      <p id="empty" hidden>Không có câu nào khớp.</p>
+      <nav class="pager" id="pager" hidden aria-label="Phân trang"></nav>
+    </div>
+    <article class="reader" id="reader">
+      <button class="back" id="reader-back" type="button">← Danh sách</button>
+      <div class="reader-empty" id="reader-empty">
+        <p>Chọn một câu hỏi bên trái.</p>
+      </div>
+      <div id="reader-view" hidden>
+        <p class="crumb" id="reader-crumb"></p>
+        <h1 id="reader-title"></h1>
+        <div class="detail-tools">
+          <button id="reader-studied" class="studied-toggle" type="button" aria-pressed="false">Đánh dấu đã học</button>
+          <p class="q-tags" id="reader-tags"></p>
+          <button id="reader-edit" class="text-btn" type="button">Sửa</button>
+          <button id="reader-delete" class="text-btn danger" type="button">Xóa</button>
+        </div>
+        <div id="reader-body"></div>
+      </div>
+    </article>
+  </div>
+  <div id="bodies" hidden>
+    {rendered.map(({ id, Content }) => (
+      <template id={`body-${id}`}>
+        <div class="prose">
+          <Content />
+        </div>
+      </template>
+    ))}
+  </div>
+  <script id="sources" type="application/json" set:html={sourceJson}></script>
+  <div class="editor" id="editor" hidden role="dialog" aria-modal="true" aria-label="Soạn câu hỏi">
+    <div class="editor-bar">
+      <input id="editor-title" class="editor-title" placeholder="Tiêu đề" maxlength="200" autocomplete="off" />
+      <select id="editor-topic" aria-label="Chủ đề">
+        {topics.map((topic) => <option value={topic}>{topic}</option>)}
+      </select>
+      <select id="editor-level" aria-label="Độ khó">
+        {levels.map((level) => <option value={level}>{levelLabel[level]}</option>)}
+      </select>
+      <input id="editor-section" aria-label="Phần" placeholder="Phần" maxlength="80" autocomplete="off" />
+      <input id="editor-group" aria-label="Nhóm" placeholder="Nhóm" maxlength="40" autocomplete="off" />
+      <input id="editor-tags" aria-label="Tag khác" placeholder="Tag khác" maxlength="120" autocomplete="off" />
+      <span class="editor-actions">
+        <button class="text-btn" id="github-setup" type="button">Token</button>
+        <button class="text-btn" id="editor-cancel" type="button">Huỷ</button>
+        <button class="editor-save" id="editor-save" type="button">Lưu</button>
+      </span>
+    </div>
+    <p id="editor-status" class="editor-status" hidden></p>
+    <div class="editor-switch">
+      <button type="button" data-pane="write" class="is-on">Markdown</button>
+      <button type="button" data-pane="preview">Xem trước</button>
+    </div>
+    <div class="editor-panes">
+      <label class="editor-pane">
+        <span>Markdown</span>
+        <textarea id="editor-body" class="editor-source" spellcheck="false" maxlength="100000" placeholder="Viết Markdown. Sơ đồ dùng khối ```mermaid."></textarea>
+      </label>
+      <div class="editor-pane">
+        <span>Xem trước</span>
+        <div id="editor-preview" class="editor-preview"></div>
+      </div>
+    </div>
+  </div>
+  <div class="keybox" id="github-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="github-heading">
+    <form id="github-form">
+      <h2 id="github-heading">Token GitHub</h2>
+      <p>Lưu và xóa sẽ commit file Markdown lên repo. Token chỉ nằm trong trình duyệt này, không ghi vào project.</p>
+      <label>
+        Token
+        <input id="github-token" type="password" autocomplete="off" spellcheck="false" />
+      </label>
+      <label>
+        Chủ repo
+        <input id="github-owner" autocomplete="off" spellcheck="false" placeholder="username" />
+      </label>
+      <div class="editor-grid">
+        <label>
+          Repo
+          <input id="github-repo" autocomplete="off" spellcheck="false" value={base.replaceAll('/', '') || 'interview'} />
+        </label>
+        <label>
+          Nhánh
+          <input id="github-branch" autocomplete="off" spellcheck="false" value="main" />
+        </label>
+      </div>
+      <p id="github-error" class="editor-status" hidden></p>
+      <div class="editor-actions">
+        <button class="text-btn" id="github-forget" type="button">Xóa token</button>
+        <button class="text-btn" id="github-dismiss" type="button">Huỷ</button>
+        <button class="editor-save" type="submit">Lưu token</button>
+      </div>
+    </form>
+  </div>
+</Base>
+
+<script>
+  import '../scripts/editor.ts';
+  import '../scripts/filter.ts';
+</script>

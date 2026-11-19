@@ -1,0 +1,80 @@
+---
+import '../styles/global.css';
+import '@fontsource/ibm-plex-sans/400.css';
+import '@fontsource/ibm-plex-sans/500.css';
+import '@fontsource/ibm-plex-sans/600.css';
+import '@fontsource/ibm-plex-mono/400.css';
+import ThemeToggle from '../components/ThemeToggle.astro';
+import { groupByTopic, loadQuestions } from '../lib/questions';
+
+interface Props {
+  title: string;
+  activeTopic?: string;
+  current?: 'roadmap';
+  split?: boolean;
+}
+
+const { title, activeTopic = '', current, split = false } = Astro.props;
+const groups = groupByTopic(await loadQuestions());
+const total = groups.reduce((sum, group) => sum + group.items.length, 0);
+const base = import.meta.env.BASE_URL;
+const documentTitle = title === 'Interview' ? 'Interview' : `${title} · Interview`;
+---
+
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Ngân hàng câu hỏi phỏng vấn Java backend." />
+    <title>{documentTitle}</title>
+    <link rel="icon" href={`${base}favicon.svg`} type="image/svg+xml" />
+    <script is:inline>
+      (function () {
+        try {
+          var stored = localStorage.getItem('theme');
+          var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+          document.documentElement.dataset.theme = theme;
+        } catch (e) {
+          document.documentElement.dataset.theme = 'light';
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <a class="brand" href={base}>
+          <span class="brand-name">Interview</span>
+          <span class="brand-sub">Java backend</span>
+        </a>
+        <nav class="nav" aria-label="Chủ đề">
+          <a href={base} data-nav-topic="" class={activeTopic ? '' : undefined}>
+            Tất cả <span>{total}</span>
+          </a>
+          {groups.map((group) => (
+            <a
+              href={`${base}?topic=${encodeURIComponent(group.topic)}`}
+              data-nav-topic={group.topic}
+              class={activeTopic === group.topic ? 'is-active' : undefined}
+            >
+              {group.topic}
+              <span>{group.items.length}</span>
+            </a>
+          ))}
+          <a href={`${base}roadmap/`} class={current === 'roadmap' ? 'is-active' : undefined}>Lộ trình</a>
+        </nav>
+      </aside>
+      <div class:list={['main', { 'is-split': split }]}>
+        <div class="top">
+          <form class="search" action={base} method="get" role="search">
+            <label class="sr" for="q">Tìm câu hỏi</label>
+            <input id="q" name="q" type="search" placeholder="Tìm câu hỏi, thẻ, SQL…" autocomplete="off" />
+          </form>
+          <ThemeToggle />
+        </div>
+        <slot />
+      </div>
+    </div>
+  </body>
+</html>

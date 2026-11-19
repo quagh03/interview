@@ -1,0 +1,109 @@
+---
+import { render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import InlineCode from '../../components/InlineCode.astro';
+import { loadQuestions } from '../../lib/questions';
+import { levelLabel } from '../../lib/taxonomy';
+
+export async function getStaticPaths() {
+  const questions = await loadQuestions();
+  return questions.map((question) => ({
+    params: { slug: question.id },
+    props: { question },
+  }));
+}
+
+const { question } = Astro.props;
+const { Content } = await render(question);
+const body = typeof question.body === 'string' ? question.body.trim() : '';
+const base = import.meta.env.BASE_URL;
+---
+
+<Base title={question.data.title} activeTopic={question.data.topic}>
+  <p class="crumb">
+    <a href={`${base}?topic=${encodeURIComponent(question.data.topic)}`}>{question.data.topic}</a>
+    <span> / </span>
+    <span>{question.data.section}</span>
+    <span> · </span>
+    <span class={question.data.level === 'senior' ? 'badge-senior' : undefined}>
+      {levelLabel[question.data.level]}
+    </span>
+  </p>
+  <h1><InlineCode text={question.data.title} /></h1>
+  <div class="detail-tools">
+    <button id="studied" class="studied-toggle" type="button" data-id={question.id} aria-pressed="false">
+      Đánh dấu đã học
+    </button>
+    {question.data.tags.length > 0 && (
+      <p class="q-tags">
+        {question.data.tags.map((tag) => (
+          <a class="mini-tag" href={`${base}?tag=${encodeURIComponent(tag)}&scope=any`}>{tag}</a>
+        ))}
+      </p>
+    )}
+  </div>
+  {body ? (
+    <div class="prose">
+      <Content />
+    </div>
+  ) : (
+    <p class="missing">Chưa có ghi chú.</p>
+  )}
+</Base>
+
+<script>
+  import { renderDiagrams } from '../../scripts/markdown';
+  import { loadStudied, toggleStudied } from '../../scripts/studied';
+
+  const prose = document.querySelector('.prose');
+  if (prose) void renderDiagrams(prose);
+
+  const button = document.querySelector<HTMLButtonElement>('#studied');
+  const id = button?.dataset.id ?? '';
+  const paint = () => {
+    if (!button) return;
+    const on = loadStudied().has(id);
+    button.textContent = on ? 'Đã học' : 'Đánh dấu đã học';
+    button.setAttribute('aria-pressed', String(on));
+  };
+  paint();
+  button?.addEventListener('click', () => {
+    toggleStudied(id);
+    paint();
+  });
+</script>
+
+<script is:inline>
+  document.querySelectorAll('pre').forEach(function (pre) {
+    var code = pre.querySelector('code');
+    var text = code ? code.innerText : '';
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'copy';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function () {
+      function done() {
+        btn.textContent = 'Đã chép';
+        setTimeout(function () { btn.textContent = 'Copy'; }, 1200);
+      }
+      function fallback() {
+        var area = document.createElement('textarea');
+        area.value = text;
+        area.setAttribute('readonly', '');
+        area.style.position = 'fixed';
+        area.style.left = '-9999px';
+        document.body.appendChild(area);
+        area.select();
+        var ok = document.execCommand('copy');
+        area.remove();
+        if (ok) done();
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else {
+        fallback();
+      }
+    });
+    pre.appendChild(btn);
+  });
+</script>

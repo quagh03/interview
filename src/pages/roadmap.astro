@@ -1,0 +1,56 @@
+---
+import Base from '../layouts/Base.astro';
+
+const steps = [
+  {
+    title: 'Java Core + Collections',
+    detail: 'OOP, String, HashMap, Exception, Stream API.',
+    priority: 'Ưu tiên cao',
+    later: false,
+  },
+  {
+    title: 'Spring Boot + Spring MVC',
+    detail: 'DI, IoC, Bean Lifecycle, REST API, Exception Handling.',
+    priority: 'Ưu tiên cao',
+    later: false,
+  },
+  {
+    title: 'JPA + Hibernate + SQL',
+    detail: 'Transaction, N+1, Index, Locking, Query Optimization.',
+    priority: 'Ưu tiên cao',
+    later: false,
+  },
+  {
+    title: 'Spring Security + JWT',
+    detail: 'Authentication, Authorization, OAuth2.',
+    priority: 'Ưu tiên tiếp theo',
+    later: true,
+  },
+  {
+    title: 'Redis + Kafka + Microservices',
+    detail: 'Caching, Messaging, Distributed System.',
+    priority: 'Ưu tiên tiếp theo',
+    later: true,
+  },
+  {
+    title: 'System Design + Concurrency',
+    detail: 'Scalability, Thread Pool, Distributed Lock, Idempotency.',
+    priority: 'Ưu tiên tiếp theo',
+    later: true,
+  },
+];
+---
+
+<Base title="Lộ trình" current="roadmap">
+  <h1>Lộ trình ôn phỏng vấn</h1>
+  <p class="lede">Nếu mục tiêu là Java Backend Developer, thứ tự ưu tiên nên là:</p>
+  <ol class="steps">
+    {steps.map((step, index) => (
+      <li>
+        <h2>{index + 1}. {step.title}</h2>
+        <p>{step.detail}</p>
+        <p class:list={['prio', { later: step.later }]}>{step.priority}</p>
+      </li>
+    ))}
+  </ol>
+</Base>
