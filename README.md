@@ -27,7 +27,7 @@ Commit dùng đúng một dạng:
 2. Sửa `title`, `topic`, `section`, `level` (`intern`, `junior`, `mid`, `senior`) và `tags`. Tag đầu tiên là nhóm hiển thị trong topic. Các tag sau dùng để lọc.
 3. Đặt `order` lớn hơn số `order` cao nhất đang có, để câu mới nằm cuối danh sách.
 4. Viết câu trả lời bên dưới frontmatter. Khối code cần tên ngôn ngữ: ` ```java `, ` ```sql `, ` ```json `, ` ```yaml `.
-5. `topic` chỉ được là một trong các giá trị: Java Core, JVM, Spring, JPA & Hibernate, Database, Security, System Design, Redis & Kafka, DevOps, Tình huống, Coding.
+5. `topic` chỉ được là một trong các giá trị: Java Core, Design Pattern, JVM, Spring, JPA & Hibernate, Database, Security, System Design, Redis & Kafka, DevOps, Tình huống, Coding.
 
 File `_template.md` không được đưa vào trang. Xóa một câu hỏi bằng cách xóa file Markdown của câu đó rồi commit.
 
