@@ -117,8 +117,7 @@ export function renderMarkdown(source: string): string {
   const lines = text.split('\n');
   const out: string[] = [];
   let paragraph: string[] = [];
-  let list: string[] = [];
-  let listTag: 'ul' | 'ol' = 'ul';
+  let list: { depth: number; tag: 'ul' | 'ol'; text: string }[] = [];
 
   const flushParagraph = () => {
     if (!paragraph.length) return;
@@ -127,7 +126,29 @@ export function renderMarkdown(source: string): string {
   };
   const flushList = () => {
     if (!list.length) return;
-    out.push(`<${listTag}>${list.map((item) => `<li>${inline(item)}</li>`).join('')}</${listTag}>`);
+    let index = 0;
+    const renderFrom = (depth: number): string => {
+      if (index >= list.length || list[index].depth < depth) return '';
+      if (list[index].depth > depth) return renderFrom(list[index].depth);
+      const chunks: string[] = [];
+      while (index < list.length && list[index].depth >= depth) {
+        if (list[index].depth > depth) {
+          chunks.push(renderFrom(list[index].depth));
+          continue;
+        }
+        const tag = list[index].tag;
+        const items: string[] = [];
+        while (index < list.length && list[index].tag === tag && list[index].depth === depth) {
+          const text = inline(list[index].text);
+          index += 1;
+          const nested = index < list.length && list[index].depth > depth ? renderFrom(depth + 1) : '';
+          items.push(`<li>${text}${nested}</li>`);
+        }
+        if (items.length) chunks.push(`<${tag}>${items.join('')}</${tag}>`);
+      }
+      return chunks.join('');
+    };
+    out.push(renderFrom(list[0].depth));
     list = [];
   };
 
@@ -147,13 +168,15 @@ export function renderMarkdown(source: string): string {
       out.push(`<h${level}>${inline(heading[2] ?? '')}</h${level}>`);
       continue;
     }
-    const item = line.match(/^\s*(?:[-*]|\d+\.)\s+(.*)$/);
+    const item = line.match(/^([ \t]*)(?:([-*])|(\d+)\.)[ \t]+(.*)$/);
     if (item) {
       flushParagraph();
-      const nextTag = /^\s*\d+\./.test(line) ? 'ol' : 'ul';
-      if (list.length && nextTag !== listTag) flushList();
-      listTag = nextTag;
-      list.push(item[1] ?? '');
+      const indent = (item[1] ?? '').replace(/\t/g, '  ');
+      list.push({
+        depth: Math.floor(indent.length / 2),
+        tag: item[3] ? 'ol' : 'ul',
+        text: item[4] ?? '',
+      });
       continue;
     }
     if (!line.trim()) {
