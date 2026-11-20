@@ -99,6 +99,69 @@ function inline(value: string): string {
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
 }
 
+function tableCells(line: string): string[] {
+  let text = line.trim();
+  if (text.startsWith('|')) text = text.slice(1);
+  if (text.endsWith('|')) text = text.slice(0, -1);
+  return text.split('|').map((cell) => cell.trim());
+}
+
+function isSeparatorCell(cell: string): boolean {
+  return /^:?-{3,}:?$/.test(cell);
+}
+
+function isSeparatorLine(line: string): boolean {
+  const cells = tableCells(line);
+  return cells.length > 0 && cells.every(isSeparatorCell);
+}
+
+function columnAlign(cell: string): 'left' | 'center' | 'right' {
+  const left = cell.startsWith(':');
+  const right = cell.endsWith(':');
+  if (left && right) return 'center';
+  if (right) return 'right';
+  return 'left';
+}
+
+function renderTable(header: string[], separators: string[], rows: string[][]): string {
+  const columns = header.length;
+  const aligns = separators.map(columnAlign);
+  const fit = (cells: string[]) => Array.from({ length: columns }, (_, index) => cells[index] ?? '');
+  const head = fit(header)
+    .map((cell, index) => `<th style="text-align:${aligns[index] ?? 'left'}">${inline(cell)}</th>`)
+    .join('');
+  const body = rows
+    .map((row) => `<tr>${fit(row).map((cell, index) => `<td style="text-align:${aligns[index] ?? 'left'}">${inline(cell)}</td>`).join('')}</tr>`)
+    .join('');
+  return `<div class="table-wrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+function renderFlatTable(line: string): string | null {
+  if (!line.includes('---')) return null;
+  let cells = tableCells(line);
+  const start = cells.findIndex(isSeparatorCell);
+  if (start < 1) return null;
+  let width = 0;
+  while (start + width < cells.length && isSeparatorCell(cells[start + width] ?? '')) width += 1;
+  let headerEnd = start;
+  if (cells[headerEnd - 1] === '') headerEnd -= 1;
+  const header = cells.slice(headerEnd - width, headerEnd);
+  if (header.length !== width || header.some(isSeparatorCell)) return null;
+  const rows: string[][] = [];
+  let row: string[] = [];
+  for (const cell of cells.slice(start + width)) {
+    if (!row.length && cell === '') continue;
+    row.push(cell);
+    if (row.length === width) {
+      rows.push(row);
+      row = [];
+    }
+  }
+  if (row.length) rows.push(row);
+  if (!rows.length) return null;
+  return renderTable(header, cells.slice(start, start + width), rows);
+}
+
 export function renderMarkdown(source: string): string {
   const fences: string[] = [];
   const text = source.replace(/```([^\n`]*)\n([\s\S]*?)```/g, (_match, lang: string, code: string) => {
@@ -152,7 +215,8 @@ export function renderMarkdown(source: string): string {
     list = [];
   };
 
-  for (const line of lines) {
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] ?? '';
     const fence = line.trim().match(/^@@FENCE(\d+)@@$/);
     if (fence) {
       flushParagraph();
@@ -166,6 +230,30 @@ export function renderMarkdown(source: string): string {
       flushList();
       const level = heading[1]?.length ?? 1;
       out.push(`<h${level}>${inline(heading[2] ?? '')}</h${level}>`);
+      continue;
+    }
+    const flatTable = renderFlatTable(line);
+    if (flatTable) {
+      flushParagraph();
+      flushList();
+      out.push(flatTable);
+      continue;
+    }
+    const nextLine = lines[index + 1] ?? '';
+    if (line.trim().startsWith('|') && isSeparatorLine(nextLine)) {
+      flushParagraph();
+      flushList();
+      const header = tableCells(line);
+      const separators = tableCells(nextLine);
+      const rows: string[][] = [];
+      index += 1;
+      while (index + 1 < lines.length) {
+        const rowLine = lines[index + 1] ?? '';
+        if (!rowLine.trim().startsWith('|') || isSeparatorLine(rowLine)) break;
+        index += 1;
+        rows.push(tableCells(rowLine));
+      }
+      out.push(renderTable(header, separators, rows));
       continue;
     }
     const item = line.match(/^([ \t]*)(?:([-*])|(\d+)\.)[ \t]+(.*)$/);

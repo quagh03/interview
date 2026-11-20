@@ -336,6 +336,21 @@ if (editor && list) {
       body: bodyInput?.value ?? '',
     });
 
+  const syncScroll = document.querySelector<HTMLInputElement>('#sync-scroll');
+  const applySync = () => {
+    if (!syncScroll?.checked || !preview || !bodyInput) return;
+    const sourceSpan = bodyInput.scrollHeight - bodyInput.clientHeight;
+    const previewSpan = preview.scrollHeight - preview.clientHeight;
+    preview.scrollTop = sourceSpan <= 0 || previewSpan <= 0 ? 0 : (bodyInput.scrollTop / sourceSpan) * previewSpan;
+  };
+  if (syncScroll) {
+    syncScroll.checked = localStorage.getItem('interview-sync-scroll') !== '0';
+    syncScroll.addEventListener('change', () => {
+      localStorage.setItem('interview-sync-scroll', syncScroll.checked ? '1' : '0');
+      applySync();
+    });
+  }
+
   const drawPreview = () => {
     if (!preview || !bodyInput) return;
     const token = ++previewToken;
@@ -349,6 +364,7 @@ if (editor && list) {
         }
         preview.innerHTML = renderMarkdown(source);
         await renderDiagrams(preview);
+        applySync();
       })
       .then(
         () => undefined,
@@ -620,6 +636,7 @@ if (editor && list) {
     });
   });
   bodyInput?.addEventListener('input', schedulePreview);
+  bodyInput?.addEventListener('scroll', applySync);
   bodyInput?.addEventListener('keydown', (event) => {
     if (event.key === 'Tab') {
       event.preventDefault();

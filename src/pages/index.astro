@@ -165,7 +165,13 @@ const sourceJson = JSON.stringify(
         <textarea id="editor-body" class="editor-source" spellcheck="false" maxlength="100000" placeholder="Viết Markdown. Sơ đồ dùng khối ```mermaid."></textarea>
       </label>
       <div class="editor-pane">
-        <span>Xem trước</span>
+        <div class="pane-label">
+          <span>Xem trước</span>
+          <label class="sync-scroll">
+            <input id="sync-scroll" type="checkbox" />
+            Cuộn cùng
+          </label>
+        </div>
         <div id="editor-preview" class="editor-preview"></div>
       </div>
     </div>

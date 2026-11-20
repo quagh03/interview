@@ -618,6 +618,26 @@ h1 code,
 
 .prose li { margin: 0.35em 0; }
 
+.prose .table-wrap { margin: 1em 0; overflow-x: auto; }
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.prose th,
+.prose td {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.prose th {
+  font-weight: 600;
+  background: var(--bg-sunken);
+}
+
 .prose li::marker { color: var(--muted); }
 
 .prose a { color: var(--accent); }
@@ -932,7 +952,8 @@ h1 code,
   background: var(--bg-sunken);
 }
 
-.editor-pane > span {
+.editor-pane > span,
+.pane-label > span {
   flex: none;
   padding: 10px 20px 0;
   color: var(--muted);
@@ -940,6 +961,34 @@ h1 code,
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.pane-label {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 20px 0;
+}
+
+.pane-label > span { padding: 0; }
+
+.sync-scroll {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sync-scroll input {
+  margin: 0;
+  accent-color: var(--accent);
 }
 
 .editor-source,
